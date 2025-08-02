@@ -1,0 +1,541 @@
+<!DOCTYPE html>
+<!-- 
+ * Calculadora de Consumo EDP v0.09 (Última Atualização: 02/08/2025)
+ *
+ * Descrição: Calculadora para estimar o consumo de energia elétrica com base nas leituras de vazio, ponta e cheias,
+ * calculando o custo total com e sem IVA, incluindo aluguel do contador.
+ *
+ * Filosofia: Código aberto, transparente, sem dependências externas, propagandas ou coleta de dados.
+ * 
+ * Status: Em desenvolvimento inicial para mobile.
+ * 
+ * Licença: GNU GPLv3 - Consulte https://www.gnu.org/licenses/gpl-3.0.html
+ * 
+ * Autor: André Ricardo
+ * Contato: 
+ * - Github: https://github.com/AndreRicardoJS/EDP-Consumption-Calculator
+ * - Pessoal: https://t.me/andre_ricardo
+ * 
+ * Importante: Use por sua conta e risco. Exporte dados regularmente para segurança.
+-->
+<html lang="pt">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Calculadora de Consumo EDP v0.09</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: #f4f4f4;
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+    }
+
+    .wrapper {
+      max-width: 430px;
+      width: 100%;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 25px;
+      font-size: 1.4em;
+    }
+
+    .container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .box {
+      background-color: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 12px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin-top: 8px;
+      font-size: 0.9em;
+    }
+
+    input[type="number"],
+    input[type="date"] {
+      width: 100%;
+      padding: 6px;
+      margin-top: 4px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 0.9em;
+    }
+
+    .barra-data {
+      grid-column: span 2;
+      background: linear-gradient(to right, #eee 50%, #d9eaf7 50%);
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 10px;
+      text-align: center;
+      font-weight: bold;
+      font-size: 0.95em;
+      margin-top: -8px;
+      margin-bottom: 10px;
+    }
+
+    .resultado {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 12px;
+      margin-bottom: 20px;
+    }
+
+    .resultado p {
+      margin: 6px 0;
+      font-size: 1em;
+    }
+
+    button {
+      margin-top: 10px;
+      padding: 8px 16px;
+      background-color: #1a73e8;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.9em;
+    }
+
+    button:hover {
+      background-color: #155db2;
+    }
+
+    .btn-secondary {
+        background-color: #6c757d;
+    }
+
+    .btn-secondary:hover {
+        background-color: #5a6268;
+    }
+
+    .periodo-card {
+      background: #fff;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      padding: 10px 40px 10px 10px;
+      margin-bottom: 10px;
+      position: relative;
+      cursor: pointer;
+    }
+
+    .periodo-card:hover {
+      background-color: #eef5ff;
+    }
+
+    .delete-btn {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background-color: transparent;
+      border: none;
+      font-size: 1.2em;
+      color: #c00;
+      cursor: pointer;
+    }
+
+    .delete-btn:hover {
+      color: #900;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrapper">
+    <h1>Calculadora de Consumo EDP <span style="font-size:0.8em;">v0.09</span></h1>
+    <div class="container">
+      <div class="box">
+        <h2 style="font-size: 1em;">Leitura Anterior</h2>
+        <label>Data da leitura:</label>
+        <input type="date" id="dataAnterior" />
+        <label>Vazio:</label>
+        <input type="number" id="vazioAnt" />
+        <label>Ponta:</label>
+        <input type="number" id="pontaAnt" />
+        <label>Cheias:</label>
+        <input type="number" id="cheiasAnt" />
+      </div>
+
+      <div class="box">
+        <h2 style="font-size: 1em;">Leitura Atual</h2>
+        <label>Data da leitura:</label>
+        <input type="date" id="dataAtual" />
+        <label>Vazio:</label>
+        <input type="number" id="vazioAtual" />
+        <label>Ponta:</label>
+        <input type="number" id="pontaAtual" />
+        <label>Cheias:</label>
+        <input type="number" id="cheiasAtual" />
+      </div>
+
+      <div class="barra-data" id="barraDatas">
+        📅 Aguardando leituras...
+      </div>
+
+      <div style="grid-column: span 2; text-align: center;">
+        <button onclick="calcular()">Calcular</button>
+        <button onclick="backup()" class="btn-secondary">Backup</button>
+        <button onclick="triggerRestore()" class="btn-secondary">Restore</button>
+        <input type="file" id="restoreFile" style="display: none;" onchange="restore()" />
+      </div>
+    </div>
+
+    <div class="resultado" id="resultado" style="display: none;">
+      <p><strong>Consumo total:</strong> <span id="kwhTotal">0</span> kWh</p>
+      <p><strong>Valor sem IVA (0,1658 €/kWh):</strong> <span id="valorBase">0.00</span> €</p>
+      <p><strong>+ Aluguel do contador:</strong> <span id="valorAluguel">0.00</span> €</p>
+      <p><strong>Valor com IVA (23%):</strong> <span id="valorIVA">0.00</span> €</p>
+    </div>
+
+    <div id="historico"></div>
+  </div>
+
+  <script>
+    const precoKwh = 0.1658;
+    const IVA = 0.23;
+    const aluguelContador = 23;
+
+    let db;
+    const dbName = 'calculadoraEDP';
+    const storeName = 'periodos';
+
+    // Abre/cria banco IndexedDB
+    function abrirDB() {
+      return new Promise((resolve, reject) => {
+        const request = indexedDB.open(dbName, 1);
+
+        request.onupgradeneeded = function (event) {
+          db = event.target.result;
+          if (!db.objectStoreNames.contains(storeName)) {
+            const store = db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true });
+          }
+        };
+
+        request.onsuccess = function (event) {
+          db = event.target.result;
+          resolve();
+        };
+
+        request.onerror = function () {
+          reject('Erro ao abrir banco IndexedDB');
+        };
+      });
+    }
+
+    // Salva período no IndexedDB
+    function salvarPeriodoIndexedDB(obj) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const request = store.add(obj);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject('Erro ao salvar período');
+      });
+    }
+
+    // Remove período pelo id
+    function excluirPeriodoIndexedDB(id) {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const request = store.delete(id);
+
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject('Erro ao excluir período');
+      });
+    }
+
+    // Busca todos os períodos, em ordem decrescente por id
+    function buscarTodosPeriodos() {
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const request = store.getAll();
+
+        request.onsuccess = () => {
+          // ordenar descendente por id (mais novo primeiro)
+          const result = request.result.sort((a, b) => b.id - a.id);
+          resolve(result);
+        };
+        request.onerror = () => reject('Erro ao buscar períodos');
+      });
+    }
+
+    // Atualiza a barra com as datas
+    function atualizarBarra(dataAnt, dataAtual) {
+      if (!dataAnt || !dataAtual) {
+        document.getElementById('barraDatas').textContent = "📅 Aguardando leituras...";
+        return;
+      }
+      const d1 = new Date(dataAnt);
+      const d2 = new Date(dataAtual);
+      const opt = { day: '2-digit', month: 'short' };
+      const texto = d1.toLocaleDateString('pt-PT', opt) + " ⟶ " + d2.toLocaleDateString('pt-PT', opt);
+      document.getElementById('barraDatas').textContent = texto;
+    }
+
+    // Define valores no formulário da leitura anterior
+    function setLeituraAnterior(atual) {
+      document.getElementById('dataAnterior').value = atual.data || '';
+      document.getElementById('cheiasAnt').value = !isNaN(atual.cheias) ? atual.cheias : '';
+      document.getElementById('pontaAnt').value = !isNaN(atual.ponta) ? atual.ponta : '';
+      document.getElementById('vazioAnt').value = !isNaN(atual.vazio) ? atual.vazio : '';
+    }
+
+    // Limpa leitura atual para nova entrada
+    function limparLeituraAtual() {
+      document.getElementById('dataAtual').value = '';
+      document.getElementById('cheiasAtual').value = '';
+      document.getElementById('pontaAtual').value = '';
+      document.getElementById('vazioAtual').value = '';
+    }
+
+    // Carrega o último registro salvo e preenche a leitura anterior
+    async function carregarUltimaLeituraAnterior() {
+      try {
+        const periodos = await buscarTodosPeriodos();
+        if (periodos.length === 0) return;
+
+        const ultimo = periodos[0];
+        if (!ultimo || !ultimo.atual) return;
+
+        setLeituraAnterior(ultimo.atual);
+        limparLeituraAtual();
+        atualizarBarra(ultimo.atual.data, '');
+        document.getElementById('resultado').style.display = 'none';
+      } catch (error) {
+        console.error('Erro ao carregar última leitura anterior:', error);
+      }
+    }
+
+    // Renderiza histórico na tela
+    async function renderizarHistorico() {
+      try {
+        const historico = await buscarTodosPeriodos();
+        const div = document.getElementById('historico');
+        if (historico.length === 0) {
+          div.innerHTML = '';
+          return;
+        }
+        div.innerHTML = "<h2 style='font-size:1em;'>Períodos Registrados</h2>";
+        historico.forEach((item) => {
+          const d1 = new Date(item.anterior.data);
+          const d2 = new Date(item.atual.data);
+          const opt = { day: '2-digit', month: 'short' };
+          const texto = d1.toLocaleDateString('pt-PT', opt) + " ⟶ " + d2.toLocaleDateString('pt-PT', opt);
+
+          const card = document.createElement('div');
+          card.className = 'periodo-card';
+          card.innerHTML = `
+            <strong>${texto}</strong><br/>
+            Consumo: ${item.consumo.toFixed(2)} kWh – Total: €${item.valorComIVA.toFixed(2)}
+            <button class="delete-btn" onclick="event.stopPropagation(); excluirPeriodo(${item.id})">🗑️</button>
+          `;
+          card.onclick = () => carregarPeriodo(item.id);
+          div.appendChild(card);
+        });
+      } catch (error) {
+        console.error('Erro ao renderizar histórico:', error);
+      }
+    }
+
+    // Carrega período pelo id no formulário
+    function carregarPeriodo(id) {
+      const tx = db.transaction(storeName, 'readonly');
+      const store = tx.objectStore(storeName);
+      const request = store.get(id);
+
+      request.onsuccess = function () {
+        const item = request.result;
+        if (!item) return;
+        document.getElementById('dataAnterior').value = item.anterior.data;
+        document.getElementById('cheiasAnt').value = item.anterior.cheias;
+        document.getElementById('pontaAnt').value = item.anterior.ponta;
+        document.getElementById('vazioAnt').value = item.anterior.vazio;
+
+        document.getElementById('dataAtual').value = item.atual.data;
+        document.getElementById('cheiasAtual').value = item.atual.cheias;
+        document.getElementById('pontaAtual').value = item.atual.ponta;
+        document.getElementById('vazioAtual').value = item.atual.vazio;
+
+        atualizarBarra(item.anterior.data, item.atual.data);
+        document.getElementById('resultado').style.display = 'block';
+
+        document.getElementById('kwhTotal').textContent = item.consumo.toFixed(2);
+        document.getElementById('valorBase').textContent = item.valorBase.toFixed(2);
+        document.getElementById('valorAluguel').textContent = aluguelContador.toFixed(2);
+        document.getElementById('valorIVA').textContent = item.valorComIVA.toFixed(2);
+      };
+      request.onerror = function () {
+        console.error('Erro ao carregar período do IndexedDB');
+      };
+    }
+
+    // Excluir período do IndexedDB e atualizar interface
+    async function excluirPeriodo(id) {
+      if (!confirm("Deseja realmente excluir este período?")) return;
+      try {
+        await excluirPeriodoIndexedDB(id);
+        await renderizarHistorico();
+        await carregarUltimaLeituraAnterior();
+      } catch (error) {
+        console.error('Erro ao excluir período:', error);
+      }
+    }
+
+    // Função principal de cálculo
+    async function calcular() {
+      const anterior = {
+        data: document.getElementById('dataAnterior').value,
+        cheias: parseFloat(document.getElementById('cheiasAnt').value),
+        ponta: parseFloat(document.getElementById('pontaAnt').value),
+        vazio: parseFloat(document.getElementById('vazioAnt').value)
+      };
+      const atual = {
+        data: document.getElementById('dataAtual').value,
+        cheias: parseFloat(document.getElementById('cheiasAtual').value),
+        ponta: parseFloat(document.getElementById('pontaAtual').value),
+        vazio: parseFloat(document.getElementById('vazioAtual').value)
+      };
+
+      if (!anterior.data || !atual.data ||
+        isNaN(anterior.cheias) || isNaN(atual.cheias) ||
+        isNaN(anterior.ponta) || isNaN(atual.ponta) ||
+        isNaN(anterior.vazio) || isNaN(atual.vazio)) {
+        alert("Preencha todas as leituras corretamente.");
+        return;
+      }
+
+      const consumo =
+        (atual.cheias - anterior.cheias) +
+        (atual.ponta - anterior.ponta) +
+        (atual.vazio - anterior.vazio);
+
+      if (consumo < 0) {
+        alert("Consumo calculado é negativo. Verifique as leituras.");
+        return;
+      }
+
+      const valorBase = consumo * precoKwh;
+      const valorComAluguel = valorBase + aluguelContador;
+      const valorComIVA = valorComAluguel * (1 + IVA);
+
+      document.getElementById('kwhTotal').textContent = consumo.toFixed(2);
+      document.getElementById('valorBase').textContent = valorBase.toFixed(2);
+      document.getElementById('valorAluguel').textContent = aluguelContador.toFixed(2);
+      document.getElementById('valorIVA').textContent = valorComIVA.toFixed(2);
+      document.getElementById('resultado').style.display = 'block';
+
+      atualizarBarra(anterior.data, atual.data);
+
+      // Salva novo registro no IndexedDB
+      try {
+        await salvarPeriodoIndexedDB({ anterior, atual, consumo, valorBase, valorComIVA });
+        await renderizarHistorico();
+
+        // Tornar leitura atual em anterior e limpar atual para nova entrada
+        setLeituraAnterior(atual);
+        limparLeituraAtual();
+      } catch (error) {
+        alert('Erro ao salvar os dados: ' + error);
+      }
+    }
+
+    // Função de backup
+    async function backup() {
+      try {
+        const periodos = await buscarTodosPeriodos();
+        const data = JSON.stringify(periodos, null, 2);
+        const blob = new Blob([data], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'backup_calculadora_edp.json';
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (error) {
+        console.error('Erro ao fazer backup:', error);
+        alert('Erro ao fazer backup: ' + error);
+      }
+    }
+
+    // Aciona o input de arquivo para restauração
+    function triggerRestore() {
+      document.getElementById('restoreFile').click();
+    }
+
+    // Função de restauração
+    async function restore() {
+      const fileInput = document.getElementById('restoreFile');
+      const file = fileInput.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = async function (event) {
+        try {
+          const periodos = JSON.parse(event.target.result);
+          if (!Array.isArray(periodos)) {
+            throw new Error('Arquivo de backup inválido.');
+          }
+
+          const tx = db.transaction(storeName, 'readwrite');
+          const store = tx.objectStore(storeName);
+          store.clear(); // Limpa os dados antigos
+
+          for (const periodo of periodos) {
+            // Remove o campo 'id' para que o IndexedDB gere um novo
+            delete periodo.id;
+            store.add(periodo);
+          }
+
+          await new Promise((resolve, reject) => {
+            tx.oncomplete = () => resolve();
+            tx.onerror = () => reject('Erro ao restaurar dados.');
+          });
+
+          await carregarUltimaLeituraAnterior();
+          await renderizarHistorico();
+          alert('Backup restaurado com sucesso!');
+        } catch (error) {
+          console.error('Erro ao restaurar backup:', error);
+          alert('Erro ao restaurar backup: ' + error);
+        }
+      };
+      reader.readAsText(file);
+    }
+
+    // Inicialização
+    (async function init() {
+      try {
+        await abrirDB();
+        await carregarUltimaLeituraAnterior();
+        await renderizarHistorico();
+      } catch (error) {
+        console.error('Erro na inicialização:', error);
+      }
+    })();
+  </script>
+</body>
+
+</html>
